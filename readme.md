@@ -389,9 +389,16 @@ Using libraries like:
 - react-beautiful-dnd
 
 # Project Setup
-Clone the repository
+
+### Clone the repository
+
+```bash
 git clone <https://github.com/kg-06/SyncSpace.git>
-Install Backend Dependencies
+```
+
+### Install Backend Dependencies
+
+```bash
 cd server
 npm install
 ```
