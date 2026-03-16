@@ -393,7 +393,7 @@ Using libraries like:
 ### Clone the repository
 
 ```bash
-git clone <https://github.com/kg-06/SyncSpace.git>
+git clone https://github.com/kg-06/SyncSpace.git
 ```
 
 ### Install Backend Dependencies
