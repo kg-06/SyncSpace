@@ -1,0 +1,36 @@
+import mongoose from "mongoose";
+
+const workspaceSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true
+    },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
+    },
+    members: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User"
+        },
+        role: {
+          type: String,
+          enum: ["lead", "member"],
+          default: "member"
+        }
+      }
+    ],
+    boards: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Board"
+      }
+    ]
+  },
+  { timestamps: true }
+);
+
+export default mongoose.model("Workspace", workspaceSchema);
