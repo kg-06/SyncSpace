@@ -435,10 +435,10 @@ npm run dev
 
 # Contributors
 
-<<<<<<< HEAD
+ 
 - Keshav Garg
 - Kashvi Chuchra
 - Harshita Sharma
 =======
-Harshita Sharma
->>>>>>> a843bdc786cabbcb722e2892ce81ed2f72fb7e74
+ 
+ 
