@@ -53,6 +53,24 @@ Users can:
 - join a workspace
 - collaborate with other members
 
+- Each workspace has **two roles** for members:
+
+### Lead
+Leads manage the workspace and coordinate the team. They can:
+- create and manage boards
+- assign tasks to members
+- review completed tasks
+- add or manage team members
+
+### Team Member
+Team members participate in the project work. They can:
+- create tasks
+- update task details
+- move tasks between columns
+- collaborate with other members
+
+The **workspace owner** is the user who creates the workspace and automatically has the highest level of control.
+
 ---
 
 # 3. Boards
@@ -94,10 +112,11 @@ Each task contains:
 
 - title
 - description
-- assigned user
+- assigned users
 - priority
 - due date
 - column reference
+- reviewd by
 
 Example task:
 
