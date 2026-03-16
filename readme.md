@@ -316,7 +316,7 @@ react-beautiful-dnd
 
 Project Setup
 Clone the repository
-git clone <repo-url>
+git clone <https://github.com/kg-06/SyncSpace.git>
 Install Backend Dependencies
 cd server
 npm install
