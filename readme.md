@@ -1,12 +1,16 @@
-SyncSpace
+# SyncSpace
+
 SyncSpace is a collaborative project management web application that allows teams to organize and track work using Kanban boards. It helps teams manage tasks, collaborate in shared workspaces, and visualize project progress.
 
-The application is built using the MERN Stack (MongoDB, Express.js, React.js, Node.js).
+The application is built using the **MERN Stack (MongoDB, Express.js, React.js, Node.js)**.
 
-Project Workflow
+---
+
+# Project Workflow
 
 SyncSpace follows a hierarchical workflow that organizes projects in a structured way.
 
+```
 User
   ↓
 Workspace
@@ -16,37 +20,42 @@ Board
 Column
   ↓
 Task
-1️⃣ User Authentication
+```
+
+---
+
+# 1. User Authentication
 
 Users can create an account and log in to the system.
 
-Workflow
+### Workflow
 
-User registers an account
+- User registers an account
+- User logs in with email and password
+- Server generates a JWT token
+- Token is used to access protected routes
 
-User logs in with email and password
+---
 
-Server generates a JWT token
-
-Token is used to access protected routes
-
-2️⃣ Workspace Creation
+# 2. Workspace Creation
 
 A Workspace represents a team or organization.
 
 Example:
 
+```
 Workspace: SyncSpace Dev Team
+```
 
 Users can:
 
-create a workspace
+- create a workspace
+- join a workspace
+- collaborate with other members
 
-join a workspace
+---
 
-collaborate with other members
-
-3️⃣ Boards
+# 3. Boards
 
 Inside each workspace, users can create Boards.
 
@@ -54,287 +63,371 @@ Boards represent projects.
 
 Example:
 
+```
 Board: Sprint Planning
+```
 
 Each board contains columns that represent stages of work.
 
-4️⃣ Columns
+---
+
+# 4. Columns
 
 Columns represent different stages of task progress.
 
 Example columns:
 
-Todo
-
-In Progress
-
-Review
-
-Done
+- Todo
+- In Progress
+- Review
+- Done
 
 Tasks move from one column to another as work progresses.
 
-5️⃣ Tasks
+---
+
+# 5. Tasks
 
 Tasks represent individual work items.
 
 Each task contains:
 
-title
-
-description
-
-assigned user
-
-priority
-
-due date
-
-column reference
+- title
+- description
+- assigned user
+- priority
+- due date
+- column reference
 
 Example task:
 
+```
 Title: Design Login Page
 Assigned To: Kashvi
 Priority: High
-Database Models
+```
 
-The project uses the following MongoDB collections:
+---
 
-User
+# Database Models
+
+The project uses the following MongoDB collections.
+
+## User
 
 Stores user information.
 
 Fields:
 
-name
+- name
+- email
+- password
+- workspaces
 
-email
+---
 
-password
-
-workspaces
-
-Workspace
+## Workspace
 
 Represents a team space.
 
 Fields:
 
-name
+- name
+- owner
+- members
+- boards
 
-owner
+---
 
-members
-
-boards
-
-Board
+## Board
 
 Represents a project board.
 
 Fields:
 
-title
+- title
+- workspace
+- columns
 
-workspace
+---
 
-columns
-
-Column
+## Column
 
 Represents stages in a Kanban board.
 
 Fields:
 
-title
+- title
+- board
+- tasks
 
-board
+---
 
-tasks
-
-Task
+## Task
 
 Represents work items.
 
 Fields:
 
-title
+- title
+- description
+- assignedTo
+- column
+- priority
+- dueDate
 
-description
+---
 
-assignedTo
-
-column
-
-priority
-
-dueDate
-
-API Endpoints
+# API Endpoints
 
 All APIs follow a REST structure.
 
-Base URL
+### Base URL
+
+```
 /api
-Authentication Routes
-Register User
+```
+
+---
+
+# Authentication Routes
+
+### Register User
+
+```
 POST /api/auth/register
+```
 
 Body:
 
+```json
 {
   "name": "User Name",
   "email": "user@email.com",
   "password": "password"
 }
-Login User
+```
+
+### Login User
+
+```
 POST /api/auth/login
+```
 
 Body:
 
+```json
 {
   "email": "user@email.com",
   "password": "password"
 }
-Workspace Routes
-Create Workspace
+```
+
+---
+
+# Workspace Routes
+
+### Create Workspace
+
+```
 POST /api/workspaces
-Get User Workspaces
+```
+
+### Get User Workspaces
+
+```
 GET /api/workspaces
-Add Member to Workspace
+```
+
+### Add Member to Workspace
+
+```
 POST /api/workspaces/:workspaceId/members
-Board Routes
-Create Board
+```
+
+---
+
+# Board Routes
+
+### Create Board
+
+```
 POST /api/boards
-Get Boards of Workspace
+```
+
+### Get Boards of Workspace
+
+```
 GET /api/boards/:workspaceId
-Delete Board
+```
+
+### Delete Board
+
+```
 DELETE /api/boards/:boardId
-Column Routes
-Create Column
+```
+
+---
+
+# Column Routes
+
+### Create Column
+
+```
 POST /api/columns
-Get Columns of Board
+```
+
+### Get Columns of Board
+
+```
 GET /api/columns/:boardId
-Task Routes
-Create Task
+```
+
+---
+
+# Task Routes
+
+### Create Task
+
+```
 POST /api/tasks
-Update Task
+```
+
+### Update Task
+
+```
 PUT /api/tasks/:taskId
-Move Task to Another Column
+```
+
+### Move Task to Another Column
+
+```
 PUT /api/tasks/:taskId/move
-Delete Task
+```
+
+### Delete Task
+
+```
 DELETE /api/tasks/:taskId
-Tech Stack
-Frontend
+```
 
-React.js
+---
 
-React Router
+# Tech Stack
 
-Axios
+## Frontend
 
-Socket.io Client
+- React.js
+- React Router
+- Axios
+- Socket.io Client
 
-Backend
+## Backend
 
-Node.js
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+- JWT Authentication
 
-Express.js
+## Tools
 
-MongoDB
+- Git
+- GitHub
+- Nodemon
 
-Mongoose
+---
 
-JWT Authentication
+# Features Implemented (MVP)
 
-Tools
+- User authentication (register/login)
+- Workspace creation
+- Board creation
+- Column management
+- Task creation
+- Task assignment
+- Move tasks between columns
+- REST API backend
 
-Git
+---
 
-GitHub
-
-Nodemon
-
-Features Implemented (MVP)
-
-User authentication (register/login)
-
-Workspace creation
-
-Board creation
-
-Column management
-
-Task creation
-
-Task assignment
-
-Move tasks between columns
-
-REST API backend
-
-Future Features
+# Future Features
 
 These features may be added in future versions.
 
-Real-Time Collaboration
+## Real-Time Collaboration
 
 Using Socket.io
 
-live task updates
+- live task updates
+- real-time board sync
 
-real-time board sync
-
-Task Comments
+## Task Comments
 
 Users can discuss tasks.
 
-Activity Logs
+## Activity Logs
 
 Example logs:
 
-User X created task
+- User X created task
+- User Y moved task to Done
 
-User Y moved task to Done
-
-Email Invitations
+## Email Invitations
 
 Invite users to workspaces via email.
 
-Notifications
+## Notifications
 
-task assigned notifications
+- task assigned notifications
+- deadline reminders
 
-deadline reminders
-
-Drag and Drop Tasks
+## Drag and Drop Tasks
 
 Using libraries like:
 
-react-beautiful-dnd
+- react-beautiful-dnd
 
-Project Setup
-Clone the repository
+---
+
+# Project Setup
+
+### Clone the repository
+
+```bash
 git clone <repo-url>
-Install Backend Dependencies
+```
+
+### Install Backend Dependencies
+
+```bash
 cd server
 npm install
+```
 
-Run backend
+### Run Backend
 
+```bash
 npm run dev
-Install Frontend Dependencies
+```
+
+### Install Frontend Dependencies
+
+```bash
 cd client
 npm install
+```
 
-Run frontend
+### Run Frontend
 
+```bash
 npm run dev
-Contributors
+```
 
-Keshav Garg
+---
 
-Kashvi Chuchra
+# Contributors
 
-Harshita Sharma
+- Keshav Garg
+- Kashvi Chuchra
+- Harshita Sharma
