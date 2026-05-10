@@ -22,6 +22,11 @@ const workspaceSchema = new mongoose.Schema(
           type: String,
           enum: ["lead", "member"],
           default: "member"
+        },
+        status: {
+          type: String,
+          enum: ["pending", "accepted"],
+          default: "pending"
         }
       }
     ],

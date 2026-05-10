@@ -1,5 +1,7 @@
 import Board from "../models/Board.js";
 import Workspace from "../models/Workspace.js";
+import { notifyUsers, getWorkspaceRecipients } from "../utils/notify.js";
+import { emitToWorkspace } from "../utils/socketEmit.js";
 
 //CREATE BOARD
 
@@ -21,6 +23,20 @@ export const createBoard = async (req, res) => {
     // push board into workspace
     workspace.boards.push(board._id);
     await workspace.save();
+
+    const recipients = await getWorkspaceRecipients(workspace._id, req.user._id);
+
+    await notifyUsers(
+      recipients,
+      "ACTIVITY",
+      `New board "${board.title}" was created in "${workspace.name}"`,
+      workspace._id,
+      `/workspace/${workspace._id}/board/${board._id}`,
+      req
+    );
+
+    await emitToWorkspace(workspace._id, "refresh_workspace", { workspaceId: workspace._id.toString() }, req);
+    await emitToWorkspace(workspace._id, "refresh_board", { boardId: board._id.toString() }, req);
 
     res.status(201).json(board);
 
@@ -75,11 +91,26 @@ export const deleteBoard = async (req, res) => {
     }
 
     // remove board from workspace
-    await Workspace.findByIdAndUpdate(board.workspace, {
+    const workspace = await Workspace.findByIdAndUpdate(board.workspace, {
       $pull: { boards: board._id }
     });
 
     await board.deleteOne();
+
+    if (workspace) {
+      const recipients = await getWorkspaceRecipients(workspace._id, req.user._id);
+
+      await notifyUsers(
+        recipients,
+        "ACTIVITY",
+        `Board "${board.title}" was deleted from "${workspace.name}"`,
+        workspace._id,
+        `/workspace/${workspace._id}`,
+        req
+      );
+
+      await emitToWorkspace(workspace._id, "refresh_workspace", { workspaceId: workspace._id.toString() }, req);
+    }
 
     res.json({ message: "Board deleted" });
 
@@ -100,9 +131,29 @@ export const updateBoard = async (req, res) => {
       return res.status(404).json({ message: "Board not found" });
     }
 
+    const oldTitle = board.title;
     board.title = title || board.title;
 
     await board.save();
+
+    if (oldTitle !== board.title) {
+      const workspace = await Workspace.findById(board.workspace);
+      if (workspace) {
+        const recipients = await getWorkspaceRecipients(workspace._id, req.user._id);
+
+        await notifyUsers(
+          recipients,
+          "ACTIVITY",
+          `Board "${oldTitle}" was renamed to "${board.title}"`,
+          workspace._id,
+          `/workspace/${workspace._id}/board/${board._id}`,
+          req
+        );
+
+        await emitToWorkspace(workspace._id, "refresh_workspace", { workspaceId: workspace._id.toString() }, req);
+        await emitToWorkspace(workspace._id, "refresh_board", { boardId: board._id.toString() }, req);
+      }
+    }
 
     res.json(board);
 

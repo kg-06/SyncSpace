@@ -7,7 +7,8 @@ import {
   addMember,
   removeMember,
   updateMemberRole,
-  leaveWorkspace
+  leaveWorkspace,
+  acceptInvite
 } from "../controllers/workspaceController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -46,6 +47,9 @@ router.delete("/:workspaceId/members/:userId", isLead,removeMember);
 
 // update member role
 router.patch("/:workspaceId/members/:userId", isLead,updateMemberRole);
+
+// accept invite
+router.post("/:workspaceId/accept-invite", acceptInvite);
 
 // leave workspace
 router.post("/:workspaceId/leave", isMember, leaveWorkspace);
