@@ -8,10 +8,13 @@ import Task from "../models/Task.js";
 
 export const isMember = async (req, res, next) => {
   try {
-    let workspaceId = req.params.workspaceId || req.body.workspaceId;
+    let workspaceId = req.params?.workspaceId || req.body?.workspaceId;
+    let boardId = req.params?.boardId || req.body?.boardId;
+    let columnId = req.params?.columnId || req.body?.columnId;
+    let taskId = req.params?.taskId || req.body?.taskId;
 
-    if (!workspaceId && req.body.boardId) {
-      const board = await Board.findById(req.body.boardId);
+    if (!workspaceId && boardId) {
+      const board = await Board.findById(boardId);
 
       if (!board) {
         return res.status(404).json({ message: "Board not found" });
@@ -20,8 +23,8 @@ export const isMember = async (req, res, next) => {
       workspaceId = board.workspace;
     }
 
-    if (!workspaceId && req.body.columnId) {
-      const column = await Column.findById(req.body.columnId);
+    if (!workspaceId && columnId) {
+      const column = await Column.findById(columnId);
 
       if (!column) {
         return res.status(404).json({ message: "Column not found" });
@@ -35,8 +38,8 @@ export const isMember = async (req, res, next) => {
 
       workspaceId = board.workspace;
     }
-    if (!workspaceId && req.params.taskId) {
-      const task = await Task.findById(req.params.taskId);
+    if (!workspaceId && taskId) {
+      const task = await Task.findById(taskId);
       if (!task) return res.status(404).json({ message: "Task not found" });
 
       const column = await Column.findById(task.column);
@@ -52,15 +55,17 @@ export const isMember = async (req, res, next) => {
     }
 
     const member = workspace.members.find(
-      (m) => m.user.toString() === req.user._id.toString()
+      (m) => m.user && m.user.toString() === req.user._id.toString()
     );
 
-    if (!member) {
+    const isOwner = workspace.owner && workspace.owner.toString() === req.user._id.toString();
+
+    if (!member && !isOwner) {
       return res.status(403).json({ message: "Not a workspace member" });
     }
 
     // attach role for later use
-    req.workspaceRole = member.role;
+    req.workspaceRole = member ? member.role : "owner";
 
     next();
 
@@ -73,14 +78,18 @@ export const isMember = async (req, res, next) => {
 
 export const isLead = async (req, res, next) => {
   try {
-    let workspaceId = req.params.workspaceId || req.body.workspaceId;
+    let workspaceId = req.params?.workspaceId || req.body?.workspaceId;
+    let boardId = req.params?.boardId || req.body?.boardId;
+    let columnId = req.params?.columnId || req.body?.columnId;
+    let taskId = req.params?.taskId || req.body?.taskId;
 
-    if (!workspaceId && req.body.boardId) {
-        const board = await Board.findById(req.body.boardId);
+    if (!workspaceId && boardId) {
+        const board = await Board.findById(boardId);
+        if (!board) return res.status(404).json({ message: "Board not found" });
         workspaceId = board.workspace;
     }
-    if (!workspaceId && req.body.columnId) {
-      const column = await Column.findById(req.body.columnId);
+    if (!workspaceId && columnId) {
+      const column = await Column.findById(columnId);
 
       if (!column) {
         return res.status(404).json({ message: "Column not found" });
@@ -94,8 +103,8 @@ export const isLead = async (req, res, next) => {
 
       workspaceId = board.workspace;
     }
-    if (!workspaceId && req.params.taskId) {
-      const task = await Task.findById(req.params.taskId);
+    if (!workspaceId && taskId) {
+      const task = await Task.findById(taskId);
       if (!task) return res.status(404).json({ message: "Task not found" });
 
       const column = await Column.findById(task.column);
@@ -111,12 +120,12 @@ export const isLead = async (req, res, next) => {
     }
 
     // owner always allowed
-    if (workspace.owner.toString() === req.user._id.toString()) {
+    if (workspace.owner && workspace.owner.toString() === req.user._id.toString()) {
       return next();
     }
 
     const member = workspace.members.find(
-      (m) => m.user.toString() === req.user._id.toString()
+      (m) => m.user && m.user.toString() === req.user._id.toString()
     );
 
     if (!member || member.role !== "lead") {

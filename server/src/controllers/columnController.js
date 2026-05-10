@@ -1,5 +1,6 @@
 import Column from "../models/Column.js";
 import Board from "../models/Board.js";
+import { emitToWorkspace } from "../utils/socketEmit.js";
 
 // CREATE COLUMN
 export const createColumn = async (req, res) => {
@@ -20,6 +21,8 @@ export const createColumn = async (req, res) => {
     // add column to board
     board.columns.push(column._id);
     await board.save();
+
+    await emitToWorkspace(board.workspace, "refresh_board", { boardId: board._id.toString() }, req);
 
     res.status(201).json(column);
 
@@ -60,6 +63,11 @@ export const updateColumn = async (req, res) => {
 
     await column.save();
 
+    const board = await Board.findById(column.board);
+    if (board) {
+      await emitToWorkspace(board.workspace, "refresh_board", { boardId: board._id.toString() }, req);
+    }
+
     res.json(column);
 
   } catch (error) {
@@ -81,7 +89,12 @@ export const deleteColumn = async (req, res) => {
       $pull: { columns: column._id }
     });
 
+    const board = await Board.findById(column.board);
     await column.deleteOne();
+
+    if (board) {
+      await emitToWorkspace(board.workspace, "refresh_board", { boardId: board._id.toString() }, req);
+    }
 
     res.json({ message: "Column deleted" });
 
@@ -103,6 +116,8 @@ export const reorderColumns = async (req, res) => {
     board.columns = columnOrder;
 
     await board.save();
+
+    await emitToWorkspace(board.workspace, "refresh_board", { boardId: board._id.toString() }, req);
 
     res.json(board);
 

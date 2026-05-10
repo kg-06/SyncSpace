@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
 import Workspace from "../models/Workspace.js";
+import User from "../models/User.js";
+import sendEmail from "../utils/sendEmail.js";
+import { notifyUsers } from "../utils/notify.js";
+import { emitToWorkspace } from "../utils/socketEmit.js";
 
 
 // CREATE WORKSPACE
@@ -92,9 +96,19 @@ export const deleteWorkspace = async (req, res) => {
 
 export const addMember = async (req, res) => {
   try {
-    const { userId, role } = req.body;
+    const { email, role } = req.body;
 
     const workspace = await Workspace.findById(req.params.workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    const userToInvite = await User.findOne({ email });
+    if (!userToInvite) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const userId = userToInvite._id.toString();
 
     // prevent duplicate members
     const alreadyExists = workspace.members.find(
@@ -102,18 +116,76 @@ export const addMember = async (req, res) => {
     );
 
     if (alreadyExists) {
-      return res.status(400).json({ message: "User already a member" });
+      return res.status(400).json({ message: "User already a member or pending invite" });
     }
 
     workspace.members.push({
       user: userId,
-      role: role || "member"
+      role: role || "member",
+      status: "pending"
     });
 
     await workspace.save();
 
+    // Send Email
+    await sendEmail({
+      to: userToInvite.email,
+      subject: `Invitation to join workspace: ${workspace.name}`,
+      text: `You have been invited to join the workspace "${workspace.name}". Please log in to your SyncSpace account to accept the invitation.`,
+    });
+
+    await notifyUsers(
+      [userId],
+      "INVITATION",
+      `You have been invited to join the workspace "${workspace.name}"`,
+      workspace._id,
+      null,
+      req
+    );
+
     res.json(workspace);
 
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//accept invite
+export const acceptInvite = async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    const userId = req.user._id;
+
+    const workspace = await Workspace.findById(workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    const member = workspace.members.find((m) => m.user.toString() === userId.toString());
+    if (!member) {
+      return res.status(400).json({ message: "No invitation found for this workspace" });
+    }
+
+    if (member.status === "accepted") {
+      return res.status(400).json({ message: "Invitation already accepted" });
+    }
+
+    member.status = "accepted";
+    await workspace.save();
+
+    // Notify owner
+    await notifyUsers(
+      [workspace.owner],
+      "ACTIVITY",
+      `${req.user.name || req.user.email} accepted the invitation to join "${workspace.name}"`,
+      workspace._id,
+      `/workspace/${workspace._id}`,
+      req
+    );
+
+    await emitToWorkspace(workspace._id, "refresh_workspace", { workspaceId: workspace._id.toString() }, req);
+
+    res.json({ message: "Invitation accepted", workspace });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -132,6 +204,8 @@ export const removeMember = async (req, res) => {
     );
 
     await workspace.save();
+
+    await emitToWorkspace(workspace._id, "refresh_workspace", { workspaceId: workspace._id.toString() }, req);
 
     res.json({ message: "Member removed" });
 
@@ -159,6 +233,8 @@ export const updateMemberRole = async (req, res) => {
     member.role = role;
 
     await workspace.save();
+
+    await emitToWorkspace(workspace._id, "refresh_workspace", { workspaceId: workspace._id.toString() }, req);
 
     res.json(workspace);
 

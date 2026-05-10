@@ -1,7 +1,9 @@
 import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../utils/generateToken.js";
+import sendEmail from "../utils/sendEmail.js";
 
+const generateOtp = () => String(Math.floor(100000 + Math.random() * 900000));
 
 // REGISTER USER
 export const registerUser = async (req, res) => {
@@ -12,29 +14,127 @@ export const registerUser = async (req, res) => {
     const userExists = await User.findOne({ email });
 
     if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
+      // If they already verified, block. If not verified, re-send OTP.
+      if (userExists.isEmailVerified) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      const otp = generateOtp();
+      const otpSalt = await bcrypt.genSalt(10);
+      userExists.emailOtpHash = await bcrypt.hash(otp, otpSalt);
+      userExists.emailOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+      await userExists.save();
+
+      await sendEmail({
+        to: userExists.email,
+        subject: "SyncSpace Email Verification OTP",
+        text: `Your SyncSpace verification OTP is: ${otp}\n\nThis OTP will expire in 10 minutes.`,
+      });
+
+      return res.status(200).json({ message: "OTP sent to email", email: userExists.email });
     }
 
     // hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    const otp = generateOtp();
+    const otpSalt = await bcrypt.genSalt(10);
+    const emailOtpHash = await bcrypt.hash(otp, otpSalt);
+    const emailOtpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+
     // create user
     const user = await User.create({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      isEmailVerified: false,
+      emailOtpHash,
+      emailOtpExpires
     });
 
-    res.status(201).json({
+    await sendEmail({
+      to: user.email,
+      subject: "SyncSpace Email Verification OTP",
+      text: `Your SyncSpace verification OTP is: ${otp}\n\nThis OTP will expire in 10 minutes.`,
+    });
+
+    res.status(201).json({ message: "OTP sent to email", email: user.email });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const verifyEmailOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({ message: "Email and OTP are required" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.isEmailVerified) {
+      return res.json({
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        token: generateToken(user._id)
+      });
+    }
+
+    if (!user.emailOtpHash || !user.emailOtpExpires) {
+      return res.status(400).json({ message: "OTP not found. Please register again." });
+    }
+
+    if (user.emailOtpExpires.getTime() < Date.now()) {
+      return res.status(400).json({ message: "OTP expired. Please register again to get a new OTP." });
+    }
+
+    const ok = await bcrypt.compare(String(otp), user.emailOtpHash);
+    if (!ok) return res.status(400).json({ message: "Invalid OTP" });
+
+    user.isEmailVerified = true;
+    user.emailOtpHash = undefined;
+    user.emailOtpExpires = undefined;
+    await user.save();
+
+    res.json({
       _id: user._id,
       name: user.name,
       email: user.email,
       token: generateToken(user._id)
     });
-
   } catch (error) {
-    console.log(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const resendEmailOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if (user.isEmailVerified) return res.status(400).json({ message: "Email is already verified" });
+
+    const otp = generateOtp();
+    const otpSalt = await bcrypt.genSalt(10);
+    user.emailOtpHash = await bcrypt.hash(otp, otpSalt);
+    user.emailOtpExpires = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    await sendEmail({
+      to: user.email,
+      subject: "SyncSpace Email Verification OTP",
+      text: `Your SyncSpace verification OTP is: ${otp}\n\nThis OTP will expire in 10 minutes.`,
+    });
+
+    res.json({ message: "OTP resent to email", email: user.email });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
@@ -49,6 +149,10 @@ export const loginUser = async (req, res) => {
 
     if (!user) {
       return res.status(400).json({ message: "Invalid email or password" });
+    }
+
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ message: "Please verify your email with OTP before logging in" });
     }
 
     // compare password
