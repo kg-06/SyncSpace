@@ -1,189 +1,132 @@
 # 🚀 SyncSpace
 
-SyncSpace is a **collaborative project management web application** built using the MERN stack. It allows teams to organize their work using **Kanban boards**, manage tasks, assign roles, and collaborate efficiently in real time.
+SyncSpace is a **collaborative project management web application** (MERN) that helps teams manage work using **Workspaces → Boards → Columns → Tasks**, with **real-time updates**, **role-based access control**, and **notifications**.
 
 ---
 
-# 📌 Overview
+## 📌 Overview
 
 SyncSpace helps teams:
-- Organize projects into workspaces
-- Manage tasks visually using boards and columns
-- Assign tasks to multiple users
-- Track progress through workflow stages
-- Collaborate with role-based access control
+- Organize projects into **Workspaces**
+- Split work into **Boards**
+- Track progress through **Kanban Columns**
+- Create and move **Tasks**
+- Invite teammates and collaborate with **RBAC**
+- Get **real-time** updates and **notifications**
 
 ---
 
-# 🧠 Project Workflow
+## ✅ Features Implemented
 
-SyncSpace follows a hierarchical structure:
+### Authentication & Security
+- **JWT authentication**
+- **Email OTP verification** on registration
+  - OTP sent to email
+  - **Resend OTP** supported
+  - Login blocked until email is verified
+- Protected APIs with auth middleware
 
-```
-User
-  ↓
-Workspace (Team)
-  ↓
-Board (Project)
-  ↓
-Column (Workflow Stage)
-  ↓
-Task (Work Item)
-```
+### Workspaces
+- Create workspace
+- View workspaces you belong to
+- Invite members by email
+- Accept invite
+- Manage members (lead)
+  - Remove member
+  - Change member role
+- Leave workspace
+- **Owner can delete workspace**
 
-### Example Workflow
+### Boards
+- Create board inside a workspace
+- View boards in a workspace
+- View a board
+- Update board (rename)
+- Delete board
+  - UI provides **delete option for leads**
 
-```
-Workspace: Dev Team
-  ├── Board: Sprint 1
-       ├── Column: Todo
-       ├── Column: In Progress
-       ├── Column: Review
-       └── Column: Done
-```
+### Kanban Columns
+- Create/update/delete columns
+- Reorder columns
 
-Tasks move across columns as work progresses.
+### Tasks
+- Create/update/delete tasks
+- Assign users to tasks (API supports multi-assign)
+- Move tasks between columns (drag & drop UI + move API)
+
+### Real-time Collaboration (Socket.IO)
+- **Real-time refresh** for board/workspace changes so users don’t need to reload
+- Real-time activity/invitation **notifications**
+
+### Search
+- Global search across workspaces/boards/tasks
 
 ---
 
-# ⚙️ Tech Stack
+## 🔐 Roles & Permissions
 
-## Frontend (Planned)
-- React.js
+- **Owner** (workspace creator)
+  - All permissions
+  - **Can delete workspace**
+- **Lead**
+  - Board/column management
+  - Member invitations/management
+  - **Can delete boards**
+- **Member**
+  - Board viewing
+  - Task interactions (create/update/move)
+
+---
+
+## ⚙️ Tech Stack
+
+### Frontend
+- React (Vite)
 - Axios
 - React Router
-- Socket.io Client
+- Socket.IO Client
+- Drag & drop: `@hello-pangea/dnd`
 
-## Backend
-- Node.js
-- Express.js
-- MongoDB
-- Mongoose
-- JWT Authentication
-
-## Tools
-- Git & GitHub
-- Nodemon
-- Postman
+### Backend
+- Node.js + Express
+- MongoDB + Mongoose
+- JWT auth + RBAC middleware
+- Socket.IO
+- Email: **SendGrid** (`@sendgrid/mail`)
 
 ---
 
-# 🗂️ Database Schema Design
+## 🔗 API Endpoints (Full List)
 
-## 👤 User
+Base URL: `http://localhost:5000/api`
 
-```js
-{
-  name: String,
-  email: String,
-  password: String
-}
+### 🔑 Auth (`/auth`)
 ```
-
----
-
-## 🏢 Workspace
-
-```js
-{
-  name: String,
-  owner: ObjectId (User),
-  members: [
-    {
-      user: ObjectId (User),
-      role: "lead" | "member"
-    }
-  ],
-  boards: [ObjectId (Board)]
-}
-```
-
----
-
-## 📋 Board
-
-```js
-{
-  title: String,
-  workspace: ObjectId (Workspace),
-  columns: [ObjectId (Column)]
-}
-```
-
----
-
-## 📊 Column
-
-```js
-{
-  title: String,
-  board: ObjectId (Board),
-  tasks: [ObjectId (Task)]
-}
-```
-
----
-
-## 🧩 Task
-
-```js
-{
-  title: String,
-  description: String,
-  assignedTo: [ObjectId (User)],
-  reviewedBy: ObjectId (User),
-  column: ObjectId (Column),
-  priority: "low" | "medium" | "high",
-  dueDate: Date
-}
-```
-
----
-
-# 🔐 Authentication & Authorization
-
-- JWT-based authentication
-- Protected routes using middleware
-- Role-based access:
-  - **Lead** → manage workspace, boards, members
-  - **Member** → manage tasks
-
----
-
-# 🔗 API Endpoints
-
-## 🔑 Auth
-
-```
-POST   /api/auth/register
+POST   /api/auth/register         (register + send OTP)
+POST   /api/auth/verify-otp       (verify OTP, returns token)
+POST   /api/auth/resend-otp       (resend OTP)
 POST   /api/auth/login
 GET    /api/auth/me
 ```
 
----
-
-## 🏢 Workspace
-
+### 🏢 Workspaces (`/workspaces`)
 ```
 POST   /api/workspaces
 GET    /api/workspaces
 GET    /api/workspaces/:workspaceId
 DELETE /api/workspaces/:workspaceId
-```
-
-### Members
-
-```
-POST   /api/workspaces/:workspaceId/members
-DELETE /api/workspaces/:workspaceId/members/:userId
-PATCH  /api/workspaces/:workspaceId/members/:userId
 POST   /api/workspaces/:workspaceId/leave
+POST   /api/workspaces/:workspaceId/accept-invite
 ```
 
----
+#### Workspace Members
+```
+POST   /api/workspaces/:workspaceId/members              (invite)
+DELETE /api/workspaces/:workspaceId/members/:userId      (remove)
+PATCH  /api/workspaces/:workspaceId/members/:userId      (update role)
+```
 
-## 📋 Board
-
+### 📋 Boards (`/boards`)
 ```
 POST   /api/boards
 GET    /api/boards/workspace/:workspaceId
@@ -192,10 +135,7 @@ PUT    /api/boards/:boardId
 DELETE /api/boards/:boardId
 ```
 
----
-
-## 📊 Column
-
+### 📊 Columns (`/columns`)
 ```
 POST   /api/columns
 GET    /api/columns/board/:boardId
@@ -204,10 +144,7 @@ DELETE /api/columns/:columnId
 PUT    /api/columns/reorder
 ```
 
----
-
-## 🧩 Task
-
+### 🧩 Tasks (`/tasks`)
 ```
 POST   /api/tasks
 GET    /api/tasks/column/:columnId
@@ -216,101 +153,75 @@ DELETE /api/tasks/:taskId
 PUT    /api/tasks/:taskId/move
 ```
 
----
+### 🔔 Notifications (`/notifications`)
+```
+GET    /api/notifications
+PUT    /api/notifications/read-all
+PUT    /api/notifications/:id/read
+```
 
-# 🖥️ How to Run Locally
-
-## 1️⃣ Clone Repository
-
-```bash
-git clone https://github.com/kg-06/SyncSpace
-cd syncspace
+### 🔎 Search (`/search`)
+```
+GET    /api/search?q=yourQuery
 ```
 
 ---
 
-## 2️⃣ Setup Backend
+## 🖥️ How to Run Locally
 
+### 1) Backend
 ```bash
 cd server
 npm install
 ```
 
----
-
-## 3️⃣ Create `.env` File
-
+Create `server/.env`:
 ```
 PORT=5000
-MONGO_URI=mongodb://localhost:27017/syncspace OR Your Mongodb Atlas URI
-JWT_SECRET=your_secret_key
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+SENDGRID_API_KEY=your_sendgrid_api_key
 ```
 
----
-
-## 4️⃣ Run Backend
-
+Run backend:
 ```bash
 npm run dev
 ```
 
-Server will run at:
+### 2) Frontend
+```bash
+cd client
+npm install
+npm run dev
+```
 
+Frontend:
+```
+http://localhost:5173
+```
+
+Backend:
 ```
 http://localhost:5000
 ```
 
 ---
 
-## 5️⃣ Test APIs
+## 🔮 Future Scope
 
-Use:
-- Postman
-- Thunder Client
-
----
-
-# 🧪 Features Implemented
-
-- User authentication (JWT)
-- Workspace management
-- Role-based access control
-- Board creation and management
-- Column (Kanban stages)
-- Task creation and assignment
-- Task movement between columns
-- Full REST API
+- Comments on tasks (discussion threads)
+- File attachments in tasks
+- Activity logs / audit trail per workspace/board
+- Due dates & reminders
+- Advanced filters & sorting (priority, assignee, status)
+- More granular permissions (per-board roles)
+- Performance improvements (optimistic updates instead of refetching)
+- Mobile-first UI polish
 
 ---
 
-# 🔮 Future Scope
+## 👥 Contributors
 
-- 🔄 Real-time updates using Socket.io
-- 💬 Task comments & discussions
-- 📎 File attachments in tasks
-- 📊 Activity logs (audit trail)
-- 📧 Email invitations to workspace
-- 🔔 Notifications system
-- 🎯 Drag-and-drop UI (React)
-- 📱 Mobile responsiveness
-
----
-
-# 👥 Contributors
-
-- Keshav Garg  
-- Kashvi Chuchra  
-- Harshita Sharma  
-
----
-
-# 💡 Summary
-
-SyncSpace is a **full-stack collaborative system** that mimics real-world tools like Trello and Jira, implementing:
-
-- scalable backend architecture  
-- role-based authorization  
-- hierarchical data modeling  
-- real-world workflow management  
-
----
+- Keshav Garg
+- Kashvi Chuchra
+- Harshita Sharma
