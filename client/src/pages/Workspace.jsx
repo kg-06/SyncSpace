@@ -15,7 +15,7 @@ export default function Workspace() {
   const [inviteRole, setInviteRole] = useState("member");
   const [view, setView] = useState("boards"); // boards | members
 
-  const { isLead, isOwner } = useRoles(workspace);
+  const { isLead, isOwner, userId } = useRoles(workspace);
   const navigate = useNavigate();
   const socket = useSocket();
 
@@ -42,10 +42,20 @@ export default function Workspace() {
           fetchWorkspaceAndBoards();
         }
       };
+      const handleRemoved = (payload) => {
+        if (payload.workspaceId === workspaceId) {
+          alert("You have been removed from this workspace.");
+          navigate("/dashboard");
+        }
+      };
       socket.on("refresh_workspace", handleRefresh);
-      return () => socket.off("refresh_workspace", handleRefresh);
+      socket.on("workspace_removed", handleRemoved);
+      return () => {
+        socket.off("refresh_workspace", handleRefresh);
+        socket.off("workspace_removed", handleRemoved);
+      };
     }
-  }, [socket, workspaceId]);
+  }, [socket, workspaceId, navigate]);
 
   const createBoard = async () => {
     if (!boardTitle) return;
@@ -77,6 +87,17 @@ export default function Workspace() {
       fetchWorkspaceAndBoards();
     } catch (err) {
       alert(err.response?.data?.message || "Error inviting member");
+    }
+  };
+
+  const handleRemoveMember = async (targetUserId) => {
+    if (!window.confirm("Are you sure you want to remove this member from the workspace?")) return;
+    try {
+      await API.delete(`/workspaces/${workspaceId}/members/${targetUserId}`);
+      alert("Member removed successfully");
+      fetchWorkspaceAndBoards();
+    } catch (err) {
+      alert(err.response?.data?.message || "Error removing member");
     }
   };
 
@@ -215,11 +236,36 @@ export default function Workspace() {
                   <p style={{ fontWeight: "600", margin: 0 }}>{m.user?.name || m.user?.email || "Unknown"}</p>
                   <p style={{ fontSize: "0.85rem", color: "var(--text-muted)", margin: 0 }}>Role: <span style={{ textTransform: "capitalize" }}>{m.role}</span></p>
                 </div>
-                <div>
+                <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                   {m.status === "pending" ? (
                     <span style={{ fontSize: "0.8rem", backgroundColor: "var(--warning)", color: "white", padding: "4px 8px", borderRadius: "12px", fontWeight: "600" }}>Pending Invite</span>
                   ) : (
                     <span style={{ fontSize: "0.8rem", backgroundColor: "var(--success)", color: "white", padding: "4px 8px", borderRadius: "12px", fontWeight: "600" }}>Active</span>
+                  )}
+                  {isLead && m.user?._id !== workspace.owner && m.user?._id !== userId && (
+                    <button
+                      onClick={() => handleRemoveMember(m.user?._id)}
+                      style={{
+                        background: "transparent",
+                        border: "1px solid var(--danger)",
+                        color: "var(--danger)",
+                        padding: "4px 8px",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "0.8rem",
+                        cursor: "pointer",
+                        fontWeight: "600"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--danger)";
+                        e.currentTarget.style.color = "white";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.color = "var(--danger)";
+                      }}
+                    >
+                      Remove
+                    </button>
                   )}
                 </div>
               </div>

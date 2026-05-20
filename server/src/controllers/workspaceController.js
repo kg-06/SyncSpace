@@ -20,7 +20,8 @@ export const createWorkspace = async (req, res) => {
       members: [
         {
           user: userId,
-          role: "lead"
+          role: "lead",
+          status: "accepted"
         }
       ]
     });
@@ -110,6 +111,11 @@ export const addMember = async (req, res) => {
 
     const userId = userToInvite._id.toString();
 
+    // Prevent inviting yourself
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({ message: "You cannot invite yourself" });
+    }
+
     // prevent duplicate members
     const alreadyExists = workspace.members.find(
       (m) => m.user.toString() === userId
@@ -198,6 +204,14 @@ export const removeMember = async (req, res) => {
     const { userId } = req.params;
 
     const workspace = await Workspace.findById(req.params.workspaceId);
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+
+    // Owner cannot be removed
+    if (workspace.owner.toString() === userId) {
+      return res.status(403).json({ message: "Cannot remove workspace owner" });
+    }
 
     workspace.members = workspace.members.filter(
       (m) => m.user.toString() !== userId
@@ -205,6 +219,23 @@ export const removeMember = async (req, res) => {
 
     await workspace.save();
 
+    // 1. Notify the user they have been removed
+    await notifyUsers(
+      [userId],
+      "ACTIVITY",
+      `You have been removed from the workspace "${workspace.name}"`,
+      workspace._id,
+      null,
+      req
+    );
+
+    // 2. Emit socket event specifically to the removed user so they redirect immediately if on the page
+    const io = req.app.get("io");
+    if (io) {
+      io.to(userId).emit("workspace_removed", { workspaceId: workspace._id.toString() });
+    }
+
+    // 3. Notify the rest of the workspace members that workspace has changed
     await emitToWorkspace(workspace._id, "refresh_workspace", { workspaceId: workspace._id.toString() }, req);
 
     res.json({ message: "Member removed" });

@@ -52,6 +52,7 @@ io.on("connection", (socket) => {
   
   socket.on("register", (userId) => {
     userSockets.set(userId, socket.id);
+    socket.join(userId);
   });
 
   socket.on("disconnect", () => {
