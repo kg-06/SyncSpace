@@ -183,3 +183,81 @@ export const getCurrentUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+//forgot password
+export const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User with this email does not exist" });
+    }
+
+    // Generate 6-digit numeric OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Hash the OTP
+    const salt = await bcrypt.genSalt(10);
+    const hashedOtp = await bcrypt.hash(otp, salt);
+
+    // Save hashed OTP & expiration (10 minutes)
+    user.resetOtpHash = hashedOtp;
+    user.resetOtpExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    // Send email with OTP
+    const message = `You requested a password reset. Your OTP code is: ${otp}. It will expire in 10 minutes.`;
+    await sendEmail({
+      to: user.email,
+      subject: "SyncSpace Password Reset OTP",
+      text: message
+    });
+
+    res.json({ message: "OTP sent to your email" });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+//reset password
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User with this email does not exist" });
+    }
+
+    if (!user.resetOtpHash || !user.resetOtpExpires || user.resetOtpExpires < Date.now()) {
+      return res.status(400).json({ message: "OTP has expired or is invalid. Please request a new one." });
+    }
+
+    // verify OTP
+    const isMatch = await bcrypt.compare(otp, user.resetOtpHash);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Update password, clear reset OTP fields
+    user.password = hashedPassword;
+    user.resetOtpHash = undefined;
+    user.resetOtpExpires = undefined;
+
+    // Ensure email is verified if they successfully complete forgot password
+    user.isEmailVerified = true;
+
+    await user.save();
+
+    res.json({ message: "Password reset successfully" });
+
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

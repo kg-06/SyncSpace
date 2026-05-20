@@ -21,9 +21,7 @@ SyncSpace helps teams:
 ### Authentication & Security
 - **JWT authentication**
 - **Email OTP verification** on registration
-  - OTP sent to email
-  - **Resend OTP** supported
-  - Login blocked until email is verified
+- **Forgot Password Flow**: Request a 6-digit OTP code to the registered email to securely reset passwords.
 - Protected APIs with auth middleware
 
 ### Workspaces
@@ -31,8 +29,8 @@ SyncSpace helps teams:
 - View workspaces you belong to
 - Invite members by email
 - Accept invite
-- Manage members (lead)
-  - Remove member
+- Manage members (lead/owner)
+  - Remove member (sends a real-time notification that redirects the removed user instantly)
   - Change member role
 - Leave workspace
 - **Owner can delete workspace**
@@ -43,20 +41,26 @@ SyncSpace helps teams:
 - View a board
 - Update board (rename)
 - Delete board
-  - UI provides **delete option for leads**
+  - UI provides **delete option for leads/owners**
+- **Glassmorphic Column Navigation**: Beautiful left/right helper buttons to navigate boards seamlessly, replacing raw browser scrollbars.
 
 ### Kanban Columns
 - Create/update/delete columns
 - Reorder columns
 
-### Tasks
-- Create/update/delete tasks
-- Assign users to tasks (API supports multi-assign)
-- Move tasks between columns (drag & drop UI + move API)
+### Tasks & Comments
+- **Compulsory Assignee**: Creating a task requires assigning it to at least one active workspace member.
+- **Creator-Only Assignment updates**: Only the original task creator has permission to modify assignees.
+- **Priority-Based Sorting**: Tasks are automatically arranged inside columns in descending order of priority (`High -> Medium -> Low`).
+- **Creator/Lead Deletion**: Tasks can be deleted by workspace leads/owners or by the original task creator.
+- **Comments Thread**: Workspace members can add comments on tasks, visible to everyone in real time.
+- **Review System**: Assigned members can mark tasks for review. Other members can perform the review and mark it complete; the reviewer's name is dynamically displayed on the card.
+- **Move Permissions**: Only assignees or the task creator can move tasks to other columns.
 
 ### Real-time Collaboration (Socket.IO)
-- **Real-time refresh** for board/workspace changes so users don’t need to reload
-- Real-time activity/invitation **notifications**
+- **User-Specific Socket Rooms**: All client sockets join rooms named after their user IDs, guaranteeing instant synchronization and notifications across multiple open tabs or windows.
+- **Real-time refresh** for board/workspace changes so users don’t need to reload.
+- Real-time activity/invitation **notifications**.
 
 ### Search
 - Global search across workspaces/boards/tasks
@@ -74,7 +78,7 @@ SyncSpace helps teams:
   - **Can delete boards**
 - **Member**
   - Board viewing
-  - Task interactions (create/update/move)
+  - Task interactions (create, comment, move if assigned/created, review if not assigned)
 
 ---
 
@@ -91,7 +95,7 @@ SyncSpace helps teams:
 - Node.js + Express
 - MongoDB + Mongoose
 - JWT auth + RBAC middleware
-- Socket.IO
+- Socket.IO (User-room based architecture)
 - Email: **SendGrid** (`@sendgrid/mail`)
 
 ---
@@ -105,6 +109,8 @@ Base URL: `http://localhost:5000/api`
 POST   /api/auth/register         (register + send OTP)
 POST   /api/auth/verify-otp       (verify OTP, returns token)
 POST   /api/auth/resend-otp       (resend OTP)
+POST   /api/auth/forgot-password  (forgot password OTP request)
+POST   /api/auth/reset-password   (reset password verification)
 POST   /api/auth/login
 GET    /api/auth/me
 ```
@@ -146,11 +152,14 @@ PUT    /api/columns/reorder
 
 ### 🧩 Tasks (`/tasks`)
 ```
-POST   /api/tasks
-GET    /api/tasks/column/:columnId
-PUT    /api/tasks/:taskId
-DELETE /api/tasks/:taskId
-PUT    /api/tasks/:taskId/move
+POST   /api/tasks                     (requires assignee, assigns creator as assignedBy)
+GET    /api/tasks/column/:columnId    (returns tasks sorted High -> Medium -> Low)
+PUT    /api/tasks/:taskId             (updates details; assignee checklist creator-only)
+DELETE /api/tasks/:taskId             (creator/lead only)
+PUT    /api/tasks/:taskId/move        (assignee/creator only)
+POST   /api/tasks/:taskId/comments    (add task comment)
+POST   /api/tasks/:taskId/mark-review (assignee only)
+POST   /api/tasks/:taskId/review      (non-assignee member only)
 ```
 
 ### 🔔 Notifications (`/notifications`)
@@ -209,13 +218,10 @@ http://localhost:5000
 
 ## 🔮 Future Scope
 
-- Comments on tasks (discussion threads)
 - File attachments in tasks
 - Activity logs / audit trail per workspace/board
 - Due dates & reminders
-- Advanced filters & sorting (priority, assignee, status)
 - More granular permissions (per-board roles)
-- Performance improvements (optimistic updates instead of refetching)
 - Mobile-first UI polish
 
 ---

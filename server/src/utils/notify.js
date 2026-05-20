@@ -30,12 +30,9 @@ export const notifyUsers = async (userIds, type, message, workspaceId = null, li
       const io = req.app.get("io");
       const userSockets = req.app.get("userSockets");
 
-      if (io && userSockets) {
+      if (io) {
         createdNotifications.forEach((notification) => {
-          const socketId = userSockets.get(notification.user.toString());
-          if (socketId) {
-            io.to(socketId).emit("notification", notification);
-          }
+          io.to(notification.user.toString()).emit("notification", notification);
         });
       }
     }

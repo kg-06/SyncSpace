@@ -25,6 +25,12 @@ const userSchema = new mongoose.Schema(
     emailOtpExpires: {
       type: Date
     },
+    resetOtpHash: {
+      type: String
+    },
+    resetOtpExpires: {
+      type: Date
+    },
     avatar: {
       type: String
     },

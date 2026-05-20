@@ -27,10 +27,7 @@ export const emitToWorkspace = async (workspaceId, eventName, payload, req) => {
       // Don't emit back to the sender
       if (req.user && req.user._id.toString() === userId) return;
 
-      const socketId = userSockets.get(userId);
-      if (socketId) {
-        io.to(socketId).emit(eventName, payload);
-      }
+      io.to(userId).emit(eventName, payload);
     });
 
   } catch (err) {
